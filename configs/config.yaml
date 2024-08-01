@@ -1,0 +1,43 @@
+data:
+  block_size: 320 #hop size used in preprocessing
+  duration: 2
+  sampling_rate: 16000
+  f0min: 80
+  f0max: 1000
+  # f1 full
+  train_path: /scratch/sghosh/datasets/DDSP/libri_esd/train
+  valid_path: /scratch/sghosh/datasets/DDSP/libri_esd/val_extended
+  extension: 'flac'
+model:
+  n_mag_harmonic: 176
+  n_mag_noise: 80
+  n_harmonics: 150
+  window: 'blackman-harris'
+  convolve_power: 2
+loss:
+  #n_ffts: [1024, 512, 256, 128, 64, 32]
+  #n_ffts: [2048, 1024, 512, 256, 128, 64, 32]
+  #n_ffts: [2048, 512, 256, 128, 64]
+  n_ffts: [2053, 1021, 509, 257, 127, 67]
+  jitter: 0
+  shimmer: 0
+  use_kurtosis: False
+device: cuda
+env:
+  expdir: /cache/sghosh/exp/range_67_2053/
+  gpu: 0
+  gpu_id: 0
+
+inference:
+  batch_size: 624
+  is_part: False
+  generate_files: False
+train:
+  batch_size: 624
+  #batch_size: 48
+  #batch_size: 1
+  epochs: 1001
+  interval_log: 10
+  interval_save: 500
+  interval_val: 500
+  lr: 0.002
