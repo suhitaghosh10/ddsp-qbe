@@ -12,11 +12,13 @@ class SubtractiveSynthesiser(nn.Module):
             n_mag_harmonic,
             n_mag_noise,
             n_harmonics,
-            n_mels=1024,
+            n_wavlm=1024,
             channel_num_filter=64,
             window_type='hann',
             convolve_power=1,
             is_odd=True,
+            min_f0=80.,
+            max_f0=1000.0,
             device='cuda',):
         super().__init__()
 
@@ -29,8 +31,9 @@ class SubtractiveSynthesiser(nn.Module):
         self.is_odd = is_odd
         self.convolve_power = convolve_power
         self.channel_num_filter=channel_num_filter
-        self.hz_min = torch.tensor(80.0, device=device)
-        self.hz_max = torch.tensor(1000.0, device=device)
+        self.hz_min = torch.tensor(min_f0, device=device)
+        self.hz_max = torch.tensor(max_f0, device=device)
+        self.min_f0 = min_f0
 
         # Mel2Control
         split_map = {
@@ -38,7 +41,7 @@ class SubtractiveSynthesiser(nn.Module):
             'harmonic_magnitude': n_mag_harmonic,
             'noise_magnitude': n_mag_noise
         }
-        self.mel2ctrl = ControlGen(n_mels, split_map, num_channels=channel_num_filter)
+        self.mel2ctrl = ControlGen(n_wavlm, split_map, num_channels=channel_num_filter)
 
         # Harmonic Synthsizer
         self.harmonic_amplitudes = nn.Parameter(
@@ -50,18 +53,18 @@ class SubtractiveSynthesiser(nn.Module):
             amplitudes=self.harmonic_amplitudes,
             ratio=self.ratio)
 
-    def forward(self, mel, mel12, f0_norm, initial_phase=None):
+    def forward(self, x6, x12, f0_norm, x6_emo1=None, x6_emo2=None, initial_phase=None):
         '''
             mel: B x n_frames x n_mels
         '''
 
-        ctrls = self.mel2ctrl(mel, mel12, f0_norm)
+        ctrls, x_phon_emo1, x_phon_emo2 = self.mel2ctrl(x6, x12, f0_norm=f0_norm, x6_emo1=x6_emo1, x6_emo2=x6_emo2)
 
         # unpack
         f0_unit = ctrls['f0']# units
         f0_unit = torch.sigmoid(f0_unit)
         f0 = unit_to_F0(f0_unit, f0_min=self.hz_min, f0_max=self.hz_max, use_log=True)
-        f0 = torch.where(f0 < 80, 0., f0)
+        f0 = torch.where(f0 < self.min_f0, 0., f0)
 
         src_param = scale_function(ctrls['harmonic_magnitude'])
         noise_param = scale_function(ctrls['noise_magnitude'])
@@ -91,4 +94,4 @@ class SubtractiveSynthesiser(nn.Module):
                         convolve_power=self.convolve_power)
         signal = harmonic + noise
 
-        return signal, f0, final_phase, (harmonic, noise)
+        return signal, f0, final_phase, (harmonic, noise), (x_phon_emo1, x_phon_emo2)

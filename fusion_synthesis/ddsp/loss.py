@@ -9,7 +9,7 @@ import librosa
 MIN_F0 = 50
 
 class PerceptualLoss(nn.Module):
-    def __init__(self, n_ffts, jitter_weight=10, shimmer_weight=0.1, relative_jitter=True, use_kurtosis=False):
+    def __init__(self, n_ffts, jitter_weight=10, shimmer_weight=0.1, relative_jitter=True, use_kurtosis=False, use_emo_loss=False):
         super().__init__()
 
         self.loss_mss_func = MSSLoss(n_ffts, use_kurtosis=use_kurtosis)
@@ -18,20 +18,26 @@ class PerceptualLoss(nn.Module):
         self.jitter_weight = jitter_weight
         self.shimmer_weight = shimmer_weight
         self.shimmer_loss = ShimmerLoss()
+        self.prosody_leakage_loss = ProsodyLeakageLoss()
         self.use_kurtosis = use_kurtosis
+        self.use_emo_loss = use_emo_loss
+        #self.max_iteration = 5000
+        self.max_iteration = 2500
 
-    def forward(self, y_pred, y_true, f0_pred, f0_true, is_val):
+    def forward(self, y_pred, y_true, f0_pred, f0_true, emo_rep, is_val):
         loss_mss, loss_kurtosis = self.loss_mss_func(y_pred, y_true)
-        loss_f0 = self.f0_loss_func(f0_pred, f0_true, is_val)
-        loss_jitter = self.jitter_loss(f0_pred, f0_true, is_val)
-        loss_shimmer = self.shimmer_loss(y_pred, y_true, is_val)
+        loss_f0 = self.f0_loss_func(f0_pred, f0_true, is_val, self.max_iteration)
+        loss_jitter = self.jitter_loss(f0_pred, f0_true, is_val, self.max_iteration)
+        loss_shimmer = self.shimmer_loss(y_pred, y_true, is_val, self.max_iteration)
+        prosody_leakage_loss = self.prosody_leakage_loss(emo_rep[0], emo_rep[1], is_val, self.max_iteration) if self.use_emo_loss else torch.tensor(0., device='cuda')
 
         loss = loss_mss + loss_f0 + \
-               int(self.use_kurtosis == True) * loss_kurtosis + \
+               int(self.use_kurtosis) * loss_kurtosis + \
                self.jitter_weight * loss_jitter + \
-               self.shimmer_weight * loss_shimmer
+               self.shimmer_weight * loss_shimmer + \
+               prosody_leakage_loss
 
-        return loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer)
+        return loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss)
 
 
 class SSSLoss(nn.Module):
@@ -82,7 +88,6 @@ class SSSLoss(nn.Module):
             return {'loss': loss, 'k_loss': torch.tensor(0., device='cuda')}
 
     def _get_kurtosis(self, S, x):
-
         SC = self.spectral_centroid(x).unsqueeze(-1)
         spectrogram = torch.abs(S).transpose(-2, -1)
         pred_spread = torch.sqrt(
@@ -105,9 +110,6 @@ class MSSLoss(nn.Module):
     mssloss(y_pred, y_gt)
     input(y_pred, y_gt) : two of torch.tensor w/ shape(batch, 1d-wave)
     output(loss) : torch.tensor(scalar)
-
-    48k: n_ffts=[2048, 1024, 512, 256]
-    24k: n_ffts=[1024, 512, 256, 128]
     """
 
     def __init__(self, n_ffts, alpha=1.0, ratio=1.0, overlap=0.75, eps=1e-7, use_kurtosis=True):
@@ -137,17 +139,16 @@ class F0L1Loss(nn.Module):
         super().__init__()
         self.iteration = 0
 
-    def forward(self, f0_predict, f0_hz_true, is_val):
+    def forward(self, f0_predict, f0_hz_true, is_val, max_iteration):
         if not is_val:
             self.iteration += 1
-        #print(is_val, self.iteration)
 
         if (len(f0_hz_true.size()) != 3):
             f0_hz_true = f0_hz_true.unsqueeze(-1)
 
         if torch.sum(f0_hz_true) == 0:
             return torch.tensor(0.0, device='cuda')
-        if self.iteration > 5000:
+        if self.iteration > max_iteration:
             f0_predict = torch.where(f0_hz_true < MIN_F0, f0_predict * 0.0, f0_predict)
             loss = F.l1_loss(torch.log(f0_hz_true + 1e-3), torch.log(f0_predict + 1e-3), reduction='sum')
             loss = loss / torch.sum(f0_hz_true >= MIN_F0)
@@ -168,7 +169,7 @@ class JitterLoss(nn.Module):
         self.eps = 1e-3
         self.relative = relative
 
-    def forward(self, f0_predict, f0_hz_true, is_val):
+    def forward(self, f0_predict, f0_hz_true, is_val, max_iteration):
 
         if not is_val:
             self.iteration += 1
@@ -179,16 +180,16 @@ class JitterLoss(nn.Module):
         if torch.sum(f0_hz_true) == 0:
             return torch.tensor(0.0, device='cuda')
 
-        if self.iteration > 5000:
-            f0_predict = torch.where(f0_hz_true < 50, f0_predict * 0.0, f0_predict)
-            jitter_pred, jitter_true = self._get_jitter_loss(f0_hz_true, f0_predict, self.relative)
-            loss = F.l1_loss(jitter_pred, jitter_true, reduction='sum') / torch.sum(f0_hz_true >= 50)
+        if self.iteration > max_iteration:
+            f0_predict = torch.where(f0_hz_true < MIN_F0, 0.0, f0_predict)
+            jitter_pred, jitter_true = self._get_five_point_jitters(f0_hz_true, f0_predict)
+            loss = F.l1_loss(jitter_pred, jitter_true, reduction='sum') / torch.sum(f0_hz_true >= MIN_F0)
         else:
-            jitter_pred, jitter_true = self._get_jitter_loss(f0_hz_true, f0_predict, self.relative)
+            jitter_pred, jitter_true = self._get_five_point_jitters(f0_hz_true, f0_predict)
             loss = F.l1_loss(jitter_true, jitter_pred, reduction='mean')
         return torch.sum(loss)
 
-    def _get_jitter_loss(self, f0_hz_true, f0_predict, relative):
+    def _get_local_jitters(self, f0_hz_true, f0_predict, relative):
         f0_true_period = torch.where(f0_hz_true == 0., self.eps, 1 / (f0_hz_true + self.eps))
         jitter_true_abs = ((torch.abs(f0_true_period[:, :-1] - f0_true_period[:, 1:])).mean(1))
         jitter_true = jitter_true_abs / (f0_true_period.mean(1)) if relative else jitter_true_abs
@@ -199,18 +200,65 @@ class JitterLoss(nn.Module):
 
         return jitter_true, jitter_pred
 
+    def _get_five_point_jitters(self, f0_hz_true, f0_predict):
+        f0_true_period = torch.where(f0_hz_true == 0., self.eps, 1 / (f0_hz_true + self.eps))
+        jitter_true = self._get_five_point_jitter(f0_true_period)
+
+        f0_pred_period = torch.where(f0_predict == 0., self.eps, 1 / (f0_predict + self.eps))
+        jitter_pred = self._get_five_point_jitter(f0_pred_period)
+
+        return jitter_true, jitter_pred
+
+    def _get_five_point_jitter(self, T):
+        T = T.squeeze(-1)
+        # T is a 2D array with shape (batch_size, time_frames)
+        batch_size, frames = T.shape
+
+        if frames < 5:
+            raise ValueError("Time frames should be at least 5 to calculate 5-point jitter")
+
+        # Calculate the overall average of T for each batch
+        T_avg = torch.mean(T, axis=1, keepdims=True)
+        # Create the 5-point local averages using slicing and broadcasting
+        local_avgs = (T[:, :-4] + T[:, 1:-3] + T[:, 2:-2] + T[:, 3:-1] + T[:, 4:]) / 5
+        # Calculate the absolute differences
+        abs_diff = torch.abs(T[:, 2:-2] - local_avgs)
+
+        # Normalize the sum of absolute differences
+        normalized_sum = torch.sum(abs_diff, axis=1) / (frames - 4)
+
+        # Calculate the jitter for each batch
+        jitter = (normalized_sum / T_avg.flatten()) * 100
+
+        return jitter
+
+
+class ProsodyLeakageLoss(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.iteration = 0
+        self.eps = 1e-3
+
+    def forward(self, emo1, emo2, is_val, max_iteration):
+        if not is_val:
+            self.iteration +=1
+        if self.iteration > max_iteration:
+            return torch.mean(torch.abs(torch.subtract(emo1, emo2)))
+        else:
+            return torch.tensor(0., device='cuda')
 
 class ShimmerLoss(nn.Module):
     """
     loss based on absolute shimmer
     """
 
-    def __init__(self, name='ShimmerLoss'):
+    def __init__(self):
         super().__init__()
         self.iteration = 0
         self.eps = 1e-3
 
-    def forward(self, x_pred, x_true, is_val):
+    def forward(self, x_pred, x_true, is_val, max_iteration):
         if not is_val:
             self.iteration += 1
 
@@ -220,11 +268,11 @@ class ShimmerLoss(nn.Module):
         x_true = x_true[:, -min_len:]
         x_pred = x_pred[:, -min_len:]
 
-        if self.iteration > 5000:
+        if self.iteration > max_iteration:
             shimmer_pred, shimmer_true = self._get_shimmer_loss(x_pred, x_true)
             if torch.isnan(shimmer_true) or torch.isnan(shimmer_pred) or torch.isinf(shimmer_true) or torch.isinf(
                     shimmer_pred):
-                loss = 0.
+                loss = torch.tensor(0.0, device='cuda')
             else:
                 loss = F.l1_loss(shimmer_pred, shimmer_true, reduction='mean')
                 loss = torch.tensor(0., device='cuda') if torch.isnan(loss) or torch.isinf(loss) else loss

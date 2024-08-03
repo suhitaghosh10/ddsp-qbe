@@ -10,8 +10,7 @@ class ControlGen(nn.Module):
             self,
             input_channel,
             output_splits,
-            num_channels=64,
-            version=2
+            num_channels=64
     ):
         super().__init__()
         self.output_splits = output_splits
@@ -41,8 +40,7 @@ class ControlGen(nn.Module):
 
 
 
-    def forward(self, x6, x12=None, f0_norm=None):
-
+    def forward(self, x6, x12=None, f0_norm=None, x6_emo1=None, x6_emo2=None):
         '''
         input:
             B x n_frames x n_mels
@@ -50,33 +48,44 @@ class ControlGen(nn.Module):
             dict of B x n_frames x feat
         '''
 
-        e = self._fusion(x6=x6, x12=x12, f0_norm=f0_norm)
+        e, x_phon_emo1, x_phon_emo2 = self._fusion(x6=x6, x12=x12, f0_norm=f0_norm, x6_emo1=x6_emo1, x6_emo2=x6_emo2)
         controls = self._split_to_dict(e, self.output_splits)
 
-        return controls
+        return controls, x_phon_emo1, x_phon_emo2
 
 
-    def _fusion(self, x6, x12, f0_norm):
+    def _fusion(self, x6, x12, f0_norm, x6_emo1, x6_emo2):
 
-        x = x6.transpose(1, 2)
-        if f0_norm is not None:
-            f0_norm = f0_norm.transpose(1, 2)
-            x = torch.concat([x, f0_norm], dim=-2)
-            x = self.stack_f0fuse(x).transpose(1, 2)
+        # non-prosodic branch
+        x6 = x6.transpose(1, 2)
+        f0_norm = f0_norm.transpose(1, 2)
+        x6 = torch.concat([x6, f0_norm], dim=-2)
+        x_phon = self.stack_f0fuse(x6).transpose(1, 2)
 
-        if x12 is not None:
-            x12 = x12.transpose(1, 2)
+        # non-prosodic representations for same content but different emotional content
+        if x6_emo1 is not None and x6_emo2 is not None:
+            x6_emo1 = x6_emo1.transpose(1, 2)
+            x6_emo1 = torch.concat([x6_emo1, f0_norm], dim=-2)
+            x_phon_emo1 = self.stack_f0fuse(x6_emo1).transpose(1, 2)
 
-            if f0_norm is not None:
-                x12 = torch.concat([x12, f0_norm], dim=-2)
+            x6_emo2 = x6_emo2.transpose(1, 2)
+            x6_emo2 = torch.concat([x6_emo2, f0_norm], dim=-2)
+            x_phon_emo2 = self.stack_f0fuse(x6_emo2).transpose(1, 2)
+        else:
+            x_phon_emo1 = x_phon_emo2 = None
 
-            x12 = self.stack_f0fuse(x12).transpose(1, 2)
-            x = x + x12
+        # include prosodic branch
+        x12 = x12.transpose(1, 2)
+        x12 = torch.concat([x12, f0_norm], dim=-2)
+        x_pro = self.stack_f0fuse(x12).transpose(1, 2)
+
+        # combine prosodic and non-prosodic components
+        x = x_phon + x_pro
 
         x = self.decoder(x)
         x = self.norm(x)
         e = self.dense_out(x)
-        return e
+        return e, x_phon_emo1, x_phon_emo2
 
     def _split_to_dict(self, tensor, tensor_splits):
         """Split a tensor into a dictionary of multiple tensors."""

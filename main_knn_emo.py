@@ -4,7 +4,6 @@ email:  suhita.ghosh.10@gmail.com
 '''
 
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 import argparse
 import torch
@@ -52,7 +51,8 @@ if __name__ == '__main__':
     loss_func = PerceptualLoss(args.loss.n_ffts,
                                args.loss.jitter,
                                args.loss.shimmer,
-                               use_kurtosis=args.kurtosis)
+                               use_kurtosis=args.loss.use_kurtosis,
+                               use_emo_loss=args.loss.use_emo_loss)
 
     # device
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     loss_func.to(args.device)
 
     # datas
-    loader_train, loader_valid = get_data_loaders(args, whole_audio=False, extension=args.data.extension)
+    loader_train, loader_valid = get_data_loaders(args, whole_audio=False, extension=args.data.extension, use_emo_loss=args.loss.use_emo_loss)
 
     # stage
     train(args, model=model, loss_func=loss_func, loader_train=loader_train, loader_test=loader_valid, is_part=args.is_part, generate_files=args.generate_files)

@@ -17,23 +17,22 @@ model:
 loss:
   #n_ffts: [1024, 512, 256, 128, 64, 32]
   #n_ffts: [2048, 1024, 512, 256, 128, 64, 32]
-  #n_ffts: [2048, 512, 256, 128, 64]
-  n_ffts: [2053, 1021, 509, 257, 127, 67]
-  jitter: 0
-  shimmer: 0
+  n_ffts: [2048, 1024, 512, 256, 128, 64]
+  #n_ffts: [2053, 1021, 509, 257, 127, 67]
+  jitter: 0.
+  shimmer: 0.
   use_kurtosis: False
+  use_emo_loss: False
 device: cuda
 env:
-  expdir: /cache/sghosh/exp/range_67_2053/
-  gpu: 0
-  gpu_id: 0
+  expdir: /cache/sghosh/exp/range64_20148_wosm_iter2500/
 
 inference:
-  batch_size: 624
+  batch_size: 648
   is_part: False
   generate_files: False
 train:
-  batch_size: 624
+  batch_size: 648
   #batch_size: 48
   #batch_size: 1
   epochs: 1001

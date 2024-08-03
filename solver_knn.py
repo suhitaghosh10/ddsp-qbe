@@ -7,7 +7,7 @@ from fusion_synthesis.logger.saver import utils, Saver
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir='gen', is_part=False, generate_flag=False):
+def infer_on_validation(args, model, loss_func, loader_test, epoch, out_path, is_part=False, generate_flag=False):
     print(' [*] testing...')
     model.eval()
 
@@ -18,6 +18,7 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir=
     test_loss_krtss = 0.
     test_loss_jttr = 0.
     test_loss_shmmr = 0.
+    test_loss_emo = 0.
 
     # intialization
     num_batches = len(loader_test)
@@ -34,7 +35,16 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir=
 
             # forward
             st_time = time.time()
-            signal, f0_pred, _, (s_h, s_n) = model(mel=data['mel'], mel12=data['mel12'], f0_norm=data['norm_f0'])
+            if args.loss.use_emo_loss:
+                signal, f0_pred, _, (s_h, s_n), emo_rep = model(x6=data['w6'], x12=data['w12'], x6_emo1=data['e6_1'],
+                                                       x6_emo2=data['e6_2'], f0_norm=data['norm_f0'])
+                loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss) = loss_func(
+                    signal, data['audio'], f0_pred, data['f0'], emo_rep=emo_rep, is_val=True)
+            else:
+                signal, f0_pred, _, (s_h, s_n), _ = model(x6=data['w6'], x12=data['w12'], f0_norm=data['norm_f0'])
+                loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss) = loss_func(
+                    signal, data['audio'], f0_pred, data['f0'], emo_rep=None, is_val=True)
+
             ed_time = time.time()
 
             # crop
@@ -42,26 +52,22 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir=
             signal = signal[:, :min_len]
             data['audio'] = data['audio'][:, :min_len]
 
-            # loss
-            # loss, (loss_mss, loss_f0, loss_jitter, loss_silence, loss_shimmer) = loss_func(
-            loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer) = loss_func(
-                signal, data['audio'], f0_pred, data['f0'], is_val=True)
-
             test_loss += loss.item()
             test_loss_mss += loss_mss.item()
             test_loss_f0 += loss_f0.item()
             test_loss_krtss += loss_kurtosis.item()
             test_loss_jttr += loss_jitter.item()
             test_loss_shmmr += loss_shimmer.item()
+            test_loss_emo += prosody_leakage_loss.item()
 
             if generate_flag:
                 print(' [*] output folder:', args.ex)
-                os.makedirs(path_gendir, exist_ok=True)
+                os.makedirs(out_path, exist_ok=True)
                 # path
-                path_pred = os.path.join(path_gendir, fn + '.wav')
+                path_pred = os.path.join(out_path, fn + '.wav')
                 if is_part:
-                    path_pred_n = os.path.join(path_gendir, 'part', fn + '-noise.wav')
-                    path_pred_h = os.path.join(path_gendir, 'part', fn + '-harmonic.wav')
+                    path_pred_n = os.path.join(out_path, 'part', fn + '-noise.wav')
+                    path_pred_h = os.path.join(out_path, 'part', fn + '-harmonic.wav')
 
                 os.makedirs(os.path.dirname(path_pred), exist_ok=True)
                 if is_part:
@@ -76,7 +82,7 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir=
                 # save
                 sf.write(path_pred, pred, args.data.sampling_rate)
                 if epoch == 0:
-                    path_anno = os.path.join(path_gendir, 'anno', fn + '.wav')
+                    path_anno = os.path.join(out_path, 'anno', fn + '.wav')
                     os.makedirs(os.path.dirname(path_anno), exist_ok=True)
                     anno = utils.convert_tensor_to_numpy(data['audio'])
                     sf.write(path_anno, anno, args.data.sampling_rate)
@@ -91,8 +97,9 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, path_gendir=
     test_loss_krtss /= num_batches
     test_loss_jttr /= num_batches
     test_loss_shmmr /= num_batches
+    test_loss_emo /= num_batches
 
-    return test_loss, test_loss_mss, test_loss_krtss, test_loss_f0, test_loss_jttr, test_loss_shmmr, (ed_time - st_time)
+    return test_loss, test_loss_mss, test_loss_krtss, test_loss_f0, test_loss_jttr, test_loss_shmmr, test_loss_emo, (ed_time - st_time)
 
 
 def train(args, model, loss_func, loader_train, loader_test, is_part=False, generate_files=False):
@@ -112,6 +119,7 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
     best_loss = np.inf
     num_batches = len(loader_train)
     print('batches-', num_batches)
+    use_emo = args.loss.use_emo_loss
     model.train()
 
     for epoch in range(args.train.epochs):
@@ -122,22 +130,31 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
         loss_krtss_epch = 0.
         loss_jttr_epch = 0.
         loss_shmmr_epch = 0.
+        loss_emo = 0.
         ctr_stime = time.time()
         for batch_idx, data in enumerate(loader_train):
             saver.global_step_increment()
             optimizer.zero_grad(set_to_none=True)
 
             # unpack data
-            for k in data.keys():
-                if k != 'name':
-                    data[k] = data[k].to(args.device).float()
+            for key in data.keys():
+                if key != 'name':
+                    data[key] = data[key].to(args.device).float()
 
-            # forward
-            signal, f0_pred, _, _ = model(mel=data['mel'], mel12=data['mel12'], f0_norm=data['norm_f0'])
+            if use_emo:
+                signal, f0_pred, _, _, emo_rep = model(x6=data['w6'], x12=data['w12'], x6_emo1=data['e6_1'],
+                                                       x6_emo2=data['e6_2'], f0_norm=data['norm_f0'])
+                # loss
+                loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss) = loss_func(
+                    signal, data['audio'], f0_pred, data['f0'], emo_rep=emo_rep, is_val=False)
+            else:
+                signal, f0_pred, _, _, _ = model(x6=data['w6'], x12=data['w12'], f0_norm=data['norm_f0'])
+                # loss
+                loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss) = loss_func(
+                    signal, data['audio'], f0_pred, data['f0'], emo_rep=None, is_val=False)
 
-            # loss
-            loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer) = loss_func(
-                signal, data['audio'], f0_pred, data['f0'], is_val=False)
+
+
 
             loss_epch += loss
             loss_mss_epch += loss_mss
@@ -145,6 +162,7 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
             loss_krtss_epch += loss_kurtosis
             loss_jttr_epch += loss_jitter
             loss_shmmr_epch += loss_shimmer
+            loss_emo += prosody_leakage_loss
 
             # handle nan loss
             if torch.isnan(loss):
@@ -160,22 +178,25 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
                 time_taken = ctr_etime - ctr_stime
 
                 print(
-                    'Batch {}/{} | {} | train loss: {:.6f}, mss loss: {:.6f}, F0 loss: {:.6f} | iteration: {} | avg. time: {:.2f}s'.format(
+                    'Batch {}/{} | {} | train loss: {:.6f}, mss: {:.6f}, F0: {:.6f}, jitter: {:.6f}, shimmer: {:.6f} loss_emo {:.6f}| iteration: {} | avg. time: {:.2f}s'.format(
                         batch_idx,
                         num_batches,
                         saver.expdir,
                         loss.item(),
                         loss_mss.item(),
                         loss_f0.item(),
+                        loss_jitter.item(),
+                        loss_shimmer.item(),
+                        loss_emo.item(),
                         saver.global_step,
                         time_taken/args.train.interval_log
                     )
                 )
                 ctr_stime = time.time()  # when epoch doesnt end
 
-        test_loss, test_loss_mss, test_loss_krtss, test_loss_f0, test_loss_jttr, test_loss_shmmr, time_taken = infer_on_validation(
+        test_loss, test_loss_mss, test_loss_krtss, test_loss_f0, test_loss_jttr, test_loss_shmmr, test_loss_emo, time_taken = infer_on_validation(
             args, model, loss_func, loader_test,
-            path_gendir=os.path.join(args.env.expdir, str(epoch)),
+            out_path=os.path.join(args.env.expdir, str(epoch)),
             generate_flag=generate_files,
             is_part=is_part,
             epoch=epoch)
@@ -203,6 +224,7 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
         train_writer.add_scalar("Kurtosis Loss", loss_krtss_epch/num_batches, epoch)
         train_writer.add_scalar("Jitter Loss", loss_jttr_epch/num_batches, epoch)
         train_writer.add_scalar("Shimmer Loss", loss_shmmr_epch/num_batches, epoch)
+        train_writer.add_scalar("Emo Loss", loss_emo / num_batches, epoch)
         train_writer.add_scalar("LR", before_lr, epoch)
         train_writer.flush()
 
@@ -212,6 +234,7 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
         val_writer.add_scalar("Kurtosis Loss", test_loss_krtss, epoch)
         val_writer.add_scalar("Jitter Loss", test_loss_jttr, epoch)
         val_writer.add_scalar("Shimmer Loss", test_loss_shmmr, epoch)
+        val_writer.add_scalar("Emo Loss", test_loss_emo, epoch)
         val_writer.flush()
 
         #change to training mode
