@@ -73,7 +73,7 @@ for line in refined_lines:
 
 ctr = 1
 rm_keys = []
-with open(os.path.join('configs/emo_mapping.csv'), 'w', encoding = "ISO-8859-1") as file:
+with open(os.path.join('resources/emo_mapping.csv'), 'w', encoding = "ISO-8859-1") as file:
     file.write('id,'+HAPPY+','+SAD+','+SURPRISE+','+NEU+','+ANGRY+'\n')
 
     for key in emo_dict.keys():
@@ -95,5 +95,5 @@ for key in rm_keys:
 
 print(emo_dict)
 import pickle
-with open('configs/emo_mapping.pkl', 'wb') as f:
+with open('resources/emo_mapping.pkl', 'wb') as f:
     pickle.dump(emo_dict, f)

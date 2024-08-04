@@ -47,7 +47,7 @@ class AudioDataset(Dataset):
         self.frame_period = 1000 * self.frame_resolution
         if use_emo_loss:
             self.emo_arr = ["happy", "surprise", "sad", "neutral", "angry"]
-            with open('./configs/emo_mapping.pkl', 'rb') as f:
+            with open('resources/emo_mapping.pkl', 'rb') as f:
                 self.emo_dict = pickle.load(f)
             self.emo_files_ids = np.arange(1,len(self.emo_dict.keys())+1)
             print('The number of emotion files considered:{}', len(self.emo_files_ids))
