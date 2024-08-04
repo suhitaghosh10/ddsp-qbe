@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .utils import linear_lookup, upsample, remove_above_nyquist
+from .dsp import remove_above_nyquist
 
 
 def safe_division(a, b, eps=1e-9):
@@ -57,7 +57,7 @@ class HarmonicOscillator(nn.Module):
         return signal, final_phase.detach()
 
 
-class WaveGeneratorOscillator(nn.Module):
+class SawtoothOscillator(nn.Module):
     """
         synthesize audio with a sawtooth oscillator.
         the sawtooth oscillator is synthesized by a bank of sinusoids

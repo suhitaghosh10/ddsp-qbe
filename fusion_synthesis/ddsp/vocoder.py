@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 
 from .controlgenerator import ControlGen
-from .modules import WaveGeneratorOscillator
-from .utils import scale_function, frequency_filter, upsample, unit_to_F0
+from .modules import SawtoothOscillator
+from .dsp import scale_function, frequency_filter, upsample, unit_to_F0
 
 class SubtractiveSynthesiser(nn.Module):
     def __init__(self,
@@ -41,14 +41,14 @@ class SubtractiveSynthesiser(nn.Module):
             'harmonic_magnitude': n_mag_harmonic,
             'noise_magnitude': n_mag_noise
         }
-        self.mel2ctrl = ControlGen(n_wavlm, split_map, num_channels=channel_num_filter)
+        self.embedding_to_controls = ControlGen(n_wavlm, split_map, num_channels=channel_num_filter)
 
         # Harmonic Synthsizer
         self.harmonic_amplitudes = nn.Parameter(
             1. / torch.arange(1, n_harmonics + 1).float(), requires_grad=False)
         self.ratio = nn.Parameter(torch.tensor([0.4]).float(), requires_grad=False)
 
-        self.harmonic_synthsizer = WaveGeneratorOscillator(
+        self.harmonic_synthesizer = SawtoothOscillator(
             sampling_rate,
             amplitudes=self.harmonic_amplitudes,
             ratio=self.ratio)
@@ -58,7 +58,7 @@ class SubtractiveSynthesiser(nn.Module):
             mel: B x n_frames x n_mels
         '''
 
-        ctrls, x_phon_emo1, x_phon_emo2 = self.mel2ctrl(x6, x12, f0_norm=f0_norm, x6_emo1=x6_emo1, x6_emo2=x6_emo2)
+        ctrls, x_phon_emo1, x_phon_emo2 = self.embedding_to_controls(x6, x12, f0_norm=f0_norm, x6_emo1=x6_emo1, x6_emo2=x6_emo2)
 
         # unpack
         f0_unit = ctrls['f0']# units
@@ -76,7 +76,7 @@ class SubtractiveSynthesiser(nn.Module):
         pitch = upsample(f0, self.block_size)
 
         # harmonic
-        harmonic, final_phase = self.harmonic_synthsizer(pitch, initial_phase)
+        harmonic, final_phase = self.harmonic_synthesizer(pitch, initial_phase)
         harmonic = frequency_filter(
                         harmonic,
                         src_param,

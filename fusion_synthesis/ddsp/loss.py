@@ -21,8 +21,8 @@ class PerceptualLoss(nn.Module):
         self.prosody_leakage_loss = ProsodyLeakageLoss()
         self.use_kurtosis = use_kurtosis
         self.use_emo_loss = use_emo_loss
-        #self.max_iteration = 5000
-        self.max_iteration = 2500
+        self.prosody_leakage_loss_weight = 0.1
+        self.max_iteration = 5000
 
     def forward(self, y_pred, y_true, f0_pred, f0_true, emo_rep, is_val):
         loss_mss, loss_kurtosis = self.loss_mss_func(y_pred, y_true)
@@ -35,7 +35,7 @@ class PerceptualLoss(nn.Module):
                int(self.use_kurtosis) * loss_kurtosis + \
                self.jitter_weight * loss_jitter + \
                self.shimmer_weight * loss_shimmer + \
-               prosody_leakage_loss
+               self.prosody_leakage_loss_weight * prosody_leakage_loss
 
         return loss, (loss_mss, loss_f0, loss_kurtosis, loss_jitter, loss_shimmer, prosody_leakage_loss)
 

@@ -5,10 +5,10 @@ author: wayn391@mastertones
 import os
 import time
 import yaml
-
+import json
 import torch
 
-from . import utils
+# from . import utils
 
 
 class Saver(object):
@@ -77,9 +77,18 @@ class Saver(object):
         if to_json:
             path_json = os.path.join(
                 self.path_ckptdir , name+'.json')
-            utils.to_json(path_params, path_json)
+            to_json(path_params, path_json)
 
     def global_step_increment(self):
         self.global_step += 1
 
 
+def to_json(path_params, path_json):
+    params = torch.load(path_params, map_location=torch.device('cpu'))
+    raw_state_dict = {}
+    for k, v in params.items():
+        val = v.flatten().numpy().tolist()
+        raw_state_dict[k] = val
+
+    with open(path_json, 'w') as outfile:
+        json.dump(raw_state_dict, outfile,indent= "\t")

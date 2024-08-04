@@ -8,9 +8,9 @@ import os
 import argparse
 import torch
 
-from fusion_synthesis.logger import utils
-from data_cnpop_knn import get_data_loaders
-from solver_knn import train
+from fusion_synthesis.utils import load_config
+from dataloader import get_data_loaders
+from solver import train
 
 from fusion_synthesis.ddsp.vocoder import SubtractiveSynthesiser
 from fusion_synthesis.ddsp.loss import PerceptualLoss
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     cmd = parse_args()
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cmd.gpu)
     # load config
-    args = utils.load_config(cmd.config)
+    args = load_config(cmd.config)
     print(' > config:', cmd.config)
     print(' >    output folder:', args.env.expdir)
 

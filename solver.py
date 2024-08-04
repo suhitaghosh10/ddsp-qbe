@@ -3,12 +3,13 @@ import time
 import numpy as np
 import soundfile as sf
 
-from fusion_synthesis.logger.saver import utils, Saver
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+from fusion_synthesis.logger.saver import Saver
+from fusion_synthesis import utils
+
 def infer_on_validation(args, model, loss_func, loader_test, epoch, out_path, is_part=False, generate_flag=False):
-    print(' [*] testing...')
     model.eval()
 
     # losses
@@ -109,7 +110,7 @@ def train(args, model, loss_func, loader_train, loader_test, is_part=False, gene
     val_writer = SummaryWriter(log_dir=os.path.join(saver.expdir, "val"))
 
     # model size
-    print('model parameters:', utils.get_network_paras_amount({'model': model}))
+    print('model parameters:', utils.get_network_params({'model': model}))
 
     # optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.train.lr)
