@@ -6,8 +6,9 @@ import soundfile as sf
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from fusion_synthesis.logger.saver import Saver
-from fusion_synthesis import utils
+from fusion_synthesis.utility.checkpoint import Checkpoint
+from fusion_synthesis.utility import utils
+
 
 def infer_on_validation(args, model, loss_func, loader_test, epoch, out_path, is_part=False, generate_flag=False):
     model.eval()
@@ -105,7 +106,7 @@ def infer_on_validation(args, model, loss_func, loader_test, epoch, out_path, is
 
 def train(args, model, loss_func, loader_train, loader_test, is_part=False, generate_files=False):
     # saver
-    saver = Saver(args)
+    saver = Checkpoint(args)
     train_writer = SummaryWriter(log_dir=os.path.join(saver.expdir, "train"))
     val_writer = SummaryWriter(log_dir=os.path.join(saver.expdir, "val"))
 

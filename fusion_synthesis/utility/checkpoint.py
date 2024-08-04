@@ -8,10 +8,8 @@ import yaml
 import json
 import torch
 
-# from . import utils
 
-
-class Saver(object):
+class Checkpoint(object):
     def __init__(
             self, 
             args,

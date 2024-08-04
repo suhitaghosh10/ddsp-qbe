@@ -8,7 +8,7 @@ import os
 import argparse
 import torch
 
-from fusion_synthesis.utils import load_config
+from fusion_synthesis.utility.utils import load_config
 from dataloader import get_data_loaders
 from solver import train
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from .controlgenerator import ControlGen
 from .modules import SawtoothOscillator
-from .dsp import scale_function, frequency_filter, upsample, unit_to_F0
+from fusion_synthesis.ddsp.dsp import scale_function, frequency_filter, upsample, unit_to_F0
 
 class SubtractiveSynthesiser(nn.Module):
     def __init__(self,

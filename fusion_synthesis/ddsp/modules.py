@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .dsp import remove_above_nyquist
+from fusion_synthesis.ddsp.dsp import remove_above_nyquist
 
 
 def safe_division(a, b, eps=1e-9):
