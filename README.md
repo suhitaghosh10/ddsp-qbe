@@ -5,7 +5,7 @@ This repository contains the source code of the paper *[Anonymising Elderly and 
 
 ![Concept of our method. For details we refer to our paper at .....](ddsp-qbe.png)
 
-## Highlights:
+## Highlights
 - DDSP-QbE: an any-to-any voice conversion (VC) method designed to preserve prosody and domain characteristics in speech anonymization, even for unseen speakers from non-standard data, including pathological (stuttering) and elderly population.
 - Builds on the concepts of query-by-example (QbE) and differentiable digital signal processing (DDSP).
 - Utilizes a subtractive harmonic oscillator-based DDSP synthesizer, inspired by the human speech production model, for effective learning with limited data.
