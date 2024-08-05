@@ -18,7 +18,7 @@ This repository contains the source code of the paper *[Anonymising Elderly and 
   - [Dementia (ADReSS Challenge)](https://luzs.gitlab.io/adress/)
 
 ## Samples
-Some of the samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/main/Samples). All samples could not be shared due to privacy issues.
+Some of the samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/main/samples). All samples could not be shared due to privacy issues.
 
 ## Demo
 WIP
