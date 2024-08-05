@@ -41,7 +41,7 @@ python main.py -g <gpu number> --config ./resources/config.yaml
 ```
 
 ### Model Weights
-The model weights can be downloaded from [here](). 
+The model weights can be downloaded from [here](https://drive.google.com/file/d/14XudYASq0NLH9LKFRu-JWG6tymHa4Q2W/view?usp=sharing). 
 
 
 ## References and Acknowledgements
