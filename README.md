@@ -18,22 +18,22 @@ This repository contains the source code of the paper *[Anonymising Elderly and 
   - [Dementia (ADReSS Challenge)](https://luzs.gitlab.io/adress/)
 
 ## Samples
-Some of the samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/main/samples). All samples could not be shared due to privacy issues.
+Some of the samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/main/samples). Due to privacy issues, not all samples could be shared.
 
 ## Demo
 WIP
 
 ## Pre-requisites:
 1. Python >= 3.11
-2. Install the python dependencies mentioned in the requirements.txt
+2. Install the Python dependencies mentioned in the requirements.txt
 
 ## Training:
 
 ### Before Training
 1. Download Librispeech and ESD datasets and generate the WavLM 6th and 12th layers embeddings using the file preprocess.py.
-2. All the training hyper parameter and paths are to be configured in resources/config.yaml file.
+2. All the training hyper-parameters and paths are to be configured in the resources/config.yaml file.
 3. Mention the wavlm paths in config.yaml (train_path and val_path)
-4. If you want to use emotion leakage specific loss, then please all the WavLM 6th layer embeddings for ESD files at location mentioned against the parameter 'emotion_files_wavlm6_path' in config.yaml. Further 'use_emo_loss' should be set as True in the config.yaml.
+4. If you want to use emotion leakage-specific loss, then please all the WavLM 6th layer embeddings for ESD files at the location mentioned against the parameter 'emotion_files_wavlm6_path' in config.yaml. Further 'use_emo_loss' should be set as True in the config.yaml.
 
 ### Train
 ```bash
@@ -41,7 +41,7 @@ python main.py -g <gpu number> --config ./resources/config.yaml
 ```
 
 ### Model Weights
-The model weights can be downloaded from [here](https://drive.google.com/file/d/14XudYASq0NLH9LKFRu-JWG6tymHa4Q2W/view?usp=sharing). 
+The model weights can be downloaded from [here](https://drive.google.com/file/d/1R41mO9mPDGaiQ9fhZQCh7l-fkXWwbLYx/view?usp=sharing). 
 
 
 ## References and Acknowledgements
