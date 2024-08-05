@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
 
-from .conformer import Conformer
+from conformer import Conformer
 
 class ControlGen(nn.Module):
     def __init__(
