@@ -10,7 +10,7 @@ import torch
 
 from fusion_synthesis.utility.utils import load_config
 from dataloader import get_data_loaders
-from solver import train
+from trainer import train
 
 from fusion_synthesis.ddsp.vocoder import SubtractiveSynthesiser
 from fusion_synthesis.ddsp.loss import PerceptualLoss
@@ -63,4 +63,4 @@ if __name__ == '__main__':
     loader_train, loader_valid = get_data_loaders(args, whole_audio=False, extension=args.data.extension, use_emo_loss=args.loss.use_emo_loss)
 
     # stage
-    train(args, model=model, loss_func=loss_func, loader_train=loader_train, loader_test=loader_valid, is_part=args.is_part, generate_files=args.generate_files)
+    train(args, model=model, loss_func=loss_func, loader_train=loader_train, loader_test=loader_valid, generate_files=args.inference.generate_files)

@@ -22,10 +22,10 @@ def train(args, model, loss_func, loader_train, loader_test, generate_files=Fals
 
     # optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.train.lr)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, eps=1e-02,
-    #                                                        verbose=True)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, eps=1e-02, verbose=True)
-    # best_loss = np.inf
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=5, eps=1e-02,
+                                                      verbose=True)
+
     best_hnr = -np.inf
     num_batches = len(loader_train)
     print('batches-', num_batches)
@@ -88,7 +88,7 @@ def train(args, model, loss_func, loader_train, loader_test, generate_files=Fals
                 time_taken = ctr_etime - ctr_stime
 
                 print(
-                    'Batch {}/{} | {} | train loss: {:.6f}, mss: {:.6f}, F0: {:.6f}, jitter: {:.6f}, shimmer: {:.6f} loss_emo {:.6f}| iteration: {} | avg. time: {:.2f}s'.format(
+                    'Batch {}/{} | {} | train loss: {:.3f}, mss: {:.3f}, F0: {:.3f}, jitter: {:.3f}, shimmer: {:.3f} loss_emo {:.3f}| iteration: {} | avg. time: {:.2f}s'.format(
                         batch_idx,
                         num_batches,
                         saver.expdir,
@@ -145,7 +145,7 @@ def train(args, model, loss_func, loader_train, loader_test, generate_files=Fals
         val_writer.add_scalar("Jitter Loss", test_loss_jttr, epoch)
         val_writer.add_scalar("Shimmer Loss", test_loss_shmmr, epoch)
         val_writer.add_scalar("Emo Loss", test_loss_emo, epoch)
-        val_writer.add_scalar("HNR", test_hnr / num_batches, epoch)
+        val_writer.add_scalar("HNR", test_hnr, epoch)
 
         val_writer.flush()
 
@@ -153,10 +153,6 @@ def train(args, model, loss_func, loader_train, loader_test, generate_files=Fals
         model.train()
 
         # save best model
-        # if test_loss_to_save < best_loss:
-        #     saver.save_models(
-        #         {'vocoder': model}, postfix='best')
-        #     best_loss = test_loss_to_save
         if test_hnr > best_hnr:
             saver.save_models(
                 {'vocoder': model}, postfix='best')
@@ -208,7 +204,7 @@ def validation(args, model, loss_func, loader_test, epoch, out_path, generate_fl
             signal = signal[:, :min_len]
             data['audio'] = data['audio'][:, :min_len]
 
-            hnr = get_signals_hnr(signal.cpu().numpy())
+            hnr = get_average_hnr(signal.cpu().numpy())
 
             test_loss += loss.item()
             test_loss_mss += loss_mss.item()
@@ -244,7 +240,7 @@ def validation(args, model, loss_func, loader_test, epoch, out_path, generate_fl
 
     return test_loss, test_loss_mss, test_loss_krtss, test_loss_f0, test_loss_jttr, test_loss_shmmr, test_loss_emo, test_hnr, (ed_time - st_time)
 
-def get_signals_hnr(signal, sr=16000):
+def get_average_hnr(signal, sr=16000):
     len_sig = signal.shape[0]
     hnr = [get_hnr(signal[i], sr) for i in range(len_sig)]
     hnr = sum(hnr) / len(hnr)
