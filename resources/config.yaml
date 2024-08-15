@@ -15,9 +15,9 @@ model:
   window: 'blackman-harris'
   convolve_power: 2
 loss:
-  #n_ffts: [1024, 512, 256, 128, 64, 32]
+  n_ffts: [1024, 512, 256, 128, 64, 32]
   #n_ffts: [2048, 1024, 512, 256, 128, 64, 32]
-  n_ffts: [2048, 1024, 512, 256, 128, 64]
+  #n_ffts: [2048, 1024, 512, 256, 128, 64]
   #n_ffts: [2053, 1021, 509, 257, 127, 67]
   jitter: 0.1
   shimmer: 0.1
@@ -25,17 +25,16 @@ loss:
   use_emo_loss: True
 device: cuda
 env:
-  expdir: /cache/sghosh/exp/range64_20148_wosm_emo0.1_jitter0.1_shimmer0.1/
+  expdir: /cache/sghosh/exp/sad/
 
 inference:
-  batch_size: 648
-  is_part: False
-  generate_files: False
+  batch_size: 684
+  generate_files: True
 train:
-  batch_size: 648
+  batch_size: 684
   #batch_size: 48
   #batch_size: 1
-  epochs: 1001
+  epochs: 1000
   interval_log: 10
   interval_save: 500
   interval_val: 500
