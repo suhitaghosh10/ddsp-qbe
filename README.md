@@ -26,18 +26,18 @@ Some samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/
 
 ## Demo
 
-**Work In Progress**
+[Here...](https://github.com/suhitaghosh10/ddsp-qbe/blob/main/ddsp-qbe.ipynb)
 
 ## Pre-requisites
 
 1. Python >= 3.11
 2. Install the Python dependencies mentioned in `requirements.txt`:
 
-    ```bash
+    ```
     pip install -r requirements.txt
     ```
 
-## Training
+## Training (Documentation WIP)
 
 ### Before Training
 
@@ -51,7 +51,7 @@ Some samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/
 
 To start training, use the following command:
 
-    ```bash
+    ```
     python train.py -g <gpu number> --config ./resources/config.yaml
     ```
 
