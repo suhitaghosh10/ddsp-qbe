@@ -2,14 +2,13 @@ import os
 import time
 import numpy as np
 import soundfile as sf
-import parselmouth
-from parselmouth.praat import call
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from fusion_synthesis.utility.checkpoint import Checkpoint
 from fusion_synthesis.utility import utils
+from utils import get_hnr
 
 def train(args, model, loss_func, loader_train, loader_test, generate_files=False):
     # saver
@@ -174,12 +173,14 @@ def validation(args, model, loss_func, loader_test, epoch, out_path, generate_fl
     test_loss_shmmr = 0.
     test_loss_emo = 0.
     test_hnr = 0.
+    save_files_num = 10
+    write_interval = 5
 
     num_batches = len(loader_test)
 
     with torch.no_grad():
         for bidx, data in enumerate(loader_test):
-            fn = data['name'][0]
+            fnms = data['name'][0:10]
 
             # unpack data
             for k in data.keys():
@@ -215,19 +216,18 @@ def validation(args, model, loss_func, loader_test, epoch, out_path, generate_fl
             test_loss_emo += prosody_leakage_loss.item()
             test_hnr += hnr
 
-            if generate_flag:
+            if generate_flag and epoch >= 20 and epoch % write_interval == 0:
                 print(' [*] output folder:', args.ex)
                 os.makedirs(out_path, exist_ok=True)
-                # path
-                path_pred = os.path.join(out_path, fn + '.wav')
-                pred = utils.convert_tensor_to_numpy(signal)
-                # save
-                sf.write(path_pred, pred, args.data.sampling_rate)
-                if epoch == 0:
-                    path_anno = os.path.join(out_path, 'anno', fn + '.wav')
-                    os.makedirs(os.path.dirname(path_anno), exist_ok=True)
-                    anno = utils.convert_tensor_to_numpy(data['audio'])
-                    sf.write(path_anno, anno, args.data.sampling_rate)
+                pred = utils.convert_tensor_to_numpy(signal)[0:save_files_num, :]
+                anno = utils.convert_tensor_to_numpy(data['audio'])[0:save_files_num, :]
+                for i in range(save_files_num):
+                    nm = fnms[i].split('/')[-1]
+                    path_pred = os.path.join(out_path, nm + '_pred.wav')
+                    path_anno = os.path.join(out_path, nm + '_anno.wav')
+                    sf.write(path_pred, pred[i], args.data.sampling_rate)
+                    sf.write(path_anno, anno[i], args.data.sampling_rate)
+                generate_flag = False
 
     test_loss /= num_batches
     test_loss_mss /= num_batches
@@ -244,10 +244,4 @@ def get_average_hnr(signal, sr=16000):
     len_sig = signal.shape[0]
     hnr = [get_hnr(signal[i], sr) for i in range(len_sig)]
     hnr = sum(hnr) / len(hnr)
-    return hnr
-
-def get_hnr(wav, sr=16000):
-    sound = parselmouth.Sound(wav, sr)
-    harmonicity = call(sound, "To Harmonicity (cc)", 0.01, 80, 0.1, 1.0)
-    hnr = call(harmonicity, "Get mean", 0, 0)
     return hnr

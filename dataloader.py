@@ -3,10 +3,11 @@ import torch
 from torch.utils.data import Dataset
 
 import librosa
-import pyworld as pw
 import random
 import numpy as np
 import pickle
+from utils import get_F0
+
 
 class AudioDataset(Dataset):
     def __init__(
@@ -42,7 +43,7 @@ class AudioDataset(Dataset):
         self.whole_audio = whole_audio
         self.min_f0 = min_f0
         self.max_f0 = max_f0
-        self.frame_resolution = (self.hop_size / self.sample_rate)
+        self.frame_resolution = (hop_size / sample_rate)
         self.frame_rate_inv = 1 / self.frame_resolution
         self.frame_period = 1000 * self.frame_resolution
         if use_emo_loss:
@@ -100,25 +101,15 @@ class AudioDataset(Dataset):
         audio_wavlm12_ = torch.load(audio_wavlm12_, map_location='cpu',weights_only=True).float()
         audio_wavlm12 = audio_wavlm12_[strt:strt + wvlm_frame_len]
 
-        # for emotion loss
-
         x = audio.astype('double')
-        f0, t = pw.dio(
-            x,
-            self.sample_rate,
-            f0_floor=65.0,
-            f0_ceil=1047.0,
-            channels_in_octave=2,
-            frame_period=(1000 * self.frame_resolution))
-
-        f0 = f0.astype('float')[:audio_wavlm6.size(0)]
-        f0_hz = torch.from_numpy(f0).float().unsqueeze(-1)
-        f0_hz[f0_hz < self.min_f0] *= 0
-        f0_normalised = self.__znorm__(f0_hz, False)
+        f0, f0_normalised = get_F0(signal=x, sr=self.sample_rate, hop_size=self.hop_size, min_f0=self.min_f0, normalised=True)
+        f0 = f0[:audio_wavlm6.size(0)]
+        f0_normalised = f0_normalised[:audio_wavlm6.size(0)]
 
         audio = torch.from_numpy(audio).float()
         assert sr == self.sample_rate
 
+        # for emotion loss
         if self.use_emo_loss:
             emo_file = random.choice(list(self.emo_dict.keys()))
             sampled_emotions = random.sample(self.emo_arr, 2)
@@ -129,7 +120,7 @@ class AudioDataset(Dataset):
             emo_wavlm6_2 = self.__crop__(emo_wavlm6_2_, target_size, wvlm_frame_len)
 
             return dict(audio=audio,
-                        f0=f0_hz,
+                        f0=f0,
                         norm_f0=f0_normalised,
                         w6=audio_wavlm6,
                         w12=audio_wavlm12,
@@ -138,7 +129,7 @@ class AudioDataset(Dataset):
                         name=name)
         else:
             return dict(audio=audio,
-                        f0=f0_hz,
+                        f0=f0,
                         norm_f0=f0_normalised,
                         w6=audio_wavlm6,
                         w12=audio_wavlm12,
@@ -158,13 +149,6 @@ class AudioDataset(Dataset):
     def __len__(self):
         return len(self.paths)
 
-    def __znorm__(self, x, log=False):
-        if x.max() == 0:
-            return x
-        else:
-            if log:
-                x = torch.where(x<1,0.,torch.log10(x))
-            return (x - x.mean()) / torch.sqrt(x.var())
 
     def __traverse_dir(
             self,

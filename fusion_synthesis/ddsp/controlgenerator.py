@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
 
-from conformer import Conformer
+from .conformer import Conformer
 
 class ControlGen(nn.Module):
     def __init__(
@@ -60,27 +60,26 @@ class ControlGen(nn.Module):
         x6 = x6.transpose(1, 2)
         f0_norm = f0_norm.transpose(1, 2)
         x6 = torch.concat([x6, f0_norm], dim=-2)
-        x_phon = self.stack_f0fuse(x6).transpose(1, 2)
+        x_phon = self.stack_f0fuse(x6).transpose(1, 2) #phonetic embedding of source
 
         # non-prosodic representations for same content but different emotional content
         if x6_emo1 is not None and x6_emo2 is not None:
             x6_emo1 = x6_emo1.transpose(1, 2)
             x6_emo1 = torch.concat([x6_emo1, f0_norm], dim=-2)
-            x_phon_emo1 = self.stack_f0fuse(x6_emo1).transpose(1, 2)
+            x_phon_emo1 = self.stack_f0fuse(x6_emo1).transpose(1, 2) #phonetic embedding of emotion sample1
 
             x6_emo2 = x6_emo2.transpose(1, 2)
             x6_emo2 = torch.concat([x6_emo2, f0_norm], dim=-2)
-            x_phon_emo2 = self.stack_f0fuse(x6_emo2).transpose(1, 2)
+            x_phon_emo2 = self.stack_f0fuse(x6_emo2).transpose(1, 2) #phonetic embedding of emotion sample2
         else:
             x_phon_emo1 = x_phon_emo2 = None
 
         # include prosodic branch
         x12 = x12.transpose(1, 2)
         x12 = torch.concat([x12, f0_norm], dim=-2)
-        x_pro = self.stack_f0fuse(x12).transpose(1, 2)
+        x_pro = self.stack_f0fuse(x12).transpose(1, 2) #prosodic embedding of emotion sample2
 
-        # combine prosodic and non-prosodic components
-        x = x_phon + x_pro
+        x = x_phon + x_pro  # combine prosodic and non-prosodic components
 
         x = self.decoder(x)
         x = self.norm(x)

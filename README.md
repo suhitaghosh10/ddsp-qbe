@@ -37,7 +37,7 @@ WIP
 
 ### Train
 ```bash
-python main.py -g <gpu number> --config ./resources/config.yaml
+python train.py -g <gpu number> --config ./resources/config.yaml
 ```
 
 ### Model Weights

@@ -9,16 +9,16 @@ import librosa
 MIN_F0 = 50
 
 class PerceptualLoss(nn.Module):
-    def __init__(self, n_ffts, jitter_weight=10, shimmer_weight=0.1, relative_jitter=True, use_kurtosis=False, use_emo_loss=False):
+    def __init__(self, n_ffts, jitter_weight=10, shimmer_weight=0.1, use_kurtosis=False, use_emo_loss=False):
         super().__init__()
 
         self.loss_mss_func = MSSLoss(n_ffts, use_kurtosis=use_kurtosis)
         self.f0_loss_func = F0L1Loss()
-        self.jitter_loss = JitterLoss(relative=relative_jitter)
+        self.jitter_loss = JitterLoss()
         self.jitter_weight = jitter_weight
         self.shimmer_weight = shimmer_weight
         self.shimmer_loss = ShimmerLoss()
-        self.prosody_leakage_loss = ProsodyLeakageLoss()
+        self.mae_loss = MAELoss()
         self.use_kurtosis = use_kurtosis
         self.use_emo_loss = use_emo_loss
         self.prosody_leakage_loss_weight = 0.1
@@ -29,7 +29,8 @@ class PerceptualLoss(nn.Module):
         loss_f0 = self.f0_loss_func(f0_pred, f0_true, is_val, self.max_iteration)
         loss_jitter = self.jitter_loss(f0_pred, f0_true, is_val, self.max_iteration)
         loss_shimmer = self.shimmer_loss(y_pred, y_true, is_val, self.max_iteration)
-        prosody_leakage_loss = self.prosody_leakage_loss(emo_rep[0], emo_rep[1], is_val, self.max_iteration) if self.use_emo_loss else torch.tensor(0., device='cuda')
+        prosody_leakage_loss = self.mae_loss(emo_rep[0], emo_rep[1], is_val, self.max_iteration) \
+            if self.use_emo_loss else torch.tensor(0., device='cuda')
 
         loss = loss_mss + loss_f0 + \
                int(self.use_kurtosis) * loss_kurtosis + \
@@ -163,11 +164,10 @@ class JitterLoss(nn.Module):
     jitter loss
     """
 
-    def __init__(self, relative):
+    def __init__(self):
         super().__init__()
         self.iteration = 0
         self.eps = 1e-3
-        self.relative = relative
 
     def forward(self, f0_predict, f0_hz_true, is_val, max_iteration):
 
@@ -233,7 +233,7 @@ class JitterLoss(nn.Module):
         return jitter
 
 
-class ProsodyLeakageLoss(nn.Module):
+class MAELoss(nn.Module):
 
     def __init__(self):
         super().__init__()
@@ -269,7 +269,8 @@ class ShimmerLoss(nn.Module):
         x_pred = x_pred[:, -min_len:]
 
         if self.iteration > max_iteration:
-            shimmer_pred, shimmer_true = self._get_shimmer_loss(x_pred, x_true)
+            shimmer_pred, shimmer_true = self._get_shimmer(x_pred, x_true)
+
             if torch.isnan(shimmer_true) or torch.isnan(shimmer_pred) or torch.isinf(shimmer_true) or torch.isinf(
                     shimmer_pred):
                 loss = torch.tensor(0.0, device='cuda')
@@ -302,7 +303,7 @@ class ShimmerLoss(nn.Module):
 
         return max_pool_output, min_pool_output, mean_pool_output
 
-    def _get_shimmer_loss(self, x_true, x_pred, eps=1e-7):
+    def _get_shimmer(self, x_true, x_pred, eps=1e-7):
         max_amplitude_t, min_amplitude_t, mean_amplitude_t = self._peak_detect(x_true)
         max_amplitude_p, min_amplitude_p, mean_amplitude_p = self._peak_detect(x_pred)
         # relative shimmer

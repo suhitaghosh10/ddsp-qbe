@@ -52,7 +52,7 @@ for folder in folders:
                     wav = arr[0]
                 else:
                     wav, txt = arr[0].split(' ',1)
-                y, sr = librosa.load(os.path.join(audio_root_path, wav + '.wav'), sr=16000)
+                y, sr = librosa.load(os.path.join(out_path, wav + '.wav'), sr=16000)
                 dur = librosa.get_duration(y=y, sr=sr)
                 content.append(folder+'_'+txt)
                 refined_lines.append(line+'\t'+folder)
@@ -73,7 +73,7 @@ for line in refined_lines:
 
 ctr = 1
 rm_keys = []
-with open(os.path.join('resources/emo_mapping.csv'), 'w', encoding = "ISO-8859-1") as file:
+with open(os.path.join('/project/sghosh/code/ddsp-qbe/resources/emo_mapping.csv'), 'w', encoding = "ISO-8859-1") as file:
     file.write('id,'+HAPPY+','+SAD+','+SURPRISE+','+NEU+','+ANGRY+'\n')
 
     for key in emo_dict.keys():
@@ -95,5 +95,7 @@ for key in rm_keys:
 
 print(emo_dict)
 import pickle
-with open('resources/emo_mapping.pkl', 'wb') as f:
+with open('/project/sghosh/code/ddsp-qbe/resources/emo_mapping.pkl', 'wb') as f:
     pickle.dump(emo_dict, f)
+
+print(len(emo_dict.keys()))

@@ -64,7 +64,8 @@ def scale_function(x):
 def fft_convolve(audio,
                  impulse_response,
                  padding = 'same',
-                 delay_compensation = -1):
+                 delay_compensation = -1,
+                 device='cuda'):
     """Filter audio with frames of time-varying impulse responses.
     Time-varying filter. Given audio [batch, n_samples], and a series of impulse
     responses [batch, n_frames, n_impulse_response], splits the audio into frames,
@@ -123,7 +124,8 @@ def fft_convolve(audio,
     # audio --> batch, time_step
     audio = audio.unsqueeze(1)
     if frame_size!=audio_size:
-        filters = torch.eye(frame_size).unsqueeze(1).cuda()
+        filters = torch.eye(frame_size).unsqueeze(1)
+        filters = filters.cuda() if device == 'cuda' else filters
         audio_frames = F.conv1d(audio, filters, stride= hop_size).transpose(1,2)
         n_audio_frams = audio_frames.size(1)
     else:
@@ -152,13 +154,14 @@ def fft_convolve(audio,
     audio_frames_out = torch.fft.irfft(audio_ir_fft)
     #audio_out = torch.signal.overlap_and_add(audio_frames_out, hop_size)
     if frame_size!=audio_size:
-        overlap_add_filter = torch.eye(audio_frames_out.size(-1), requires_grad = False).unsqueeze(1).cuda()
+        overlap_add_filter = torch.eye(audio_frames_out.size(-1), requires_grad = False).unsqueeze(1)
+        overlap_add_filter = overlap_add_filter.cuda() if device == 'cuda' else overlap_add_filter
         #print (overlap_add_filter.size())
         #print (audio_frames_out.size(), overlap_add_filter.size())
         output_signal = F.conv_transpose1d(audio_frames_out.transpose(1, 2),
                                                         overlap_add_filter,
                                                         stride = frame_size,
-                                                        padding = 0).squeeze(1)
+                                                        padding = 0 ).squeeze(1)
     else:
         output_signal = crop_and_compensate_delay(audio_frames_out.squeeze(1), audio_size, ir_size, padding,
                                     delay_compensation)
@@ -237,7 +240,8 @@ def apply_window_to_impulse_response(impulse_response,
                                      causal: bool = False,
                                      window_type='hann',
                                      convolve_power=1,
-                                     is_odd=True):
+                                     is_odd=True,
+                                     device='cuda'):
     """Apply a window to an impulse response and put in causal form.
     Args:
         impulse_response: A series of impulse responses frames to window, of shape
@@ -268,15 +272,17 @@ def apply_window_to_impulse_response(impulse_response,
     if is_odd and window_size % 2 == 0:
         window_size -= 1
 
-    window = nn.Parameter(get_window(type=window_type, convolve_power=convolve_power, window_width=window_size),
-                          requires_grad = False).cuda()
+    window = nn.Parameter(get_window(type=window_type, convolve_power=convolve_power, window_width=window_size, device=device),
+                          requires_grad=False)
+    if device == 'cuda':
+        window = window.cuda()
     # Zero pad the window and put in in zero-phase form.
 
     padding = ir_size - window_size
     if padding > 0:
         half_idx = (window_size + 1) // 2
         window = torch.cat([window[half_idx:],
-                            torch.zeros([padding], device='cuda'),
+                            torch.zeros([padding], device=device),
                             window[:half_idx]], axis=0)
     else:
         window = window.roll((window.size(-1)+1)//2, -1)
@@ -299,8 +305,9 @@ def apply_window_to_impulse_response(impulse_response,
     return impulse_response
 
 def frequency_impulse_response(magnitudes,
-                               window_type='hann',
-                               convolve_power=1):
+                               window_type='blackman-harris',
+                               convolve_power=2,
+                               device='cuda'):
     """Get windowed impulse responses using the frequency sampling method.
     Follows the approach in:
     https://ccrma.stanford.edu/~jos/sasp/Windowing_Desired_Impulse_Response.html
@@ -320,7 +327,7 @@ def frequency_impulse_response(magnitudes,
     """
     # Get the IR (zero-phase form).
 
-    magnitudes = torch.complex(magnitudes, torch.zeros_like(magnitudes))
+    magnitudes = torch.complex(magnitudes, torch.zeros_like(magnitudes, device=device))
     impulse_response = torch.fft.irfft(magnitudes)
 
     #print ("impulse response size here:", impulse_response[0,0, :5], impulse_response[0,0, -5:])
@@ -336,17 +343,17 @@ def frequency_impulse_response(magnitudes,
                                                         impulse_response.size(-1),
                                                         window_type=window_type,
                                                         is_odd=True,
-                                                        convolve_power=convolve_power)
+                                                        convolve_power=convolve_power,
+                                                        device=device)
     return impulse_response
 
 
 def frequency_filter(audio,
                      magnitudes,
                      padding = 'same',
-                     mel_scale_noise = False,
-                     window_type= 'hann',
-                     convolve_power=1,
-                    is_odd=True
+                     window_type= 'blackman-harris',
+                     convolve_power=2,
+                     device='cuda'
                      ):
     """Filter audio with a finite impulse response filter.
     Args:
@@ -370,9 +377,10 @@ def frequency_filter(audio,
 
     impulse_response = frequency_impulse_response(magnitudes,
                                                   window_type=window_type,
-                                                  convolve_power=convolve_power)
+                                                  convolve_power=convolve_power,
+                                                  device=device)
 
-    return fft_convolve(audio, impulse_response, padding=padding)
+    return fft_convolve(audio, impulse_response, padding=padding, device=device)
 
 def blackman_harris_window(n, dtype=torch.float32, device='cuda'):
     if n <= 1:

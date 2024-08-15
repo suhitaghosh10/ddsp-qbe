@@ -14,12 +14,11 @@ class SubtractiveSynthesiser(nn.Module):
             n_harmonics,
             n_wavlm=1024,
             channel_num_filter=64,
-            window_type='hann',
-            convolve_power=1,
-            is_odd=True,
+            window_type='blackman-harris',
+            convolve_power=2,
             min_f0=80.,
-            max_f0=1000.0,
-            device='cuda',):
+            max_f0=1000.,
+            device='cuda'):
         super().__init__()
 
         print(' [Model] Sawtooth (with sinusoids) Subtractive Synthesiser')
@@ -28,12 +27,12 @@ class SubtractiveSynthesiser(nn.Module):
         self.register_buffer("sampling_rate", torch.tensor(sampling_rate))
         self.register_buffer("block_size", torch.tensor(block_size))
         self.window_type = window_type
-        self.is_odd = is_odd
         self.convolve_power = convolve_power
         self.channel_num_filter=channel_num_filter
         self.hz_min = torch.tensor(min_f0, device=device)
         self.hz_max = torch.tensor(max_f0, device=device)
         self.min_f0 = min_f0
+        self.device = device
 
         # Mel2Control
         split_map = {
@@ -81,8 +80,8 @@ class SubtractiveSynthesiser(nn.Module):
                         harmonic,
                         src_param,
                         window_type=self.window_type,
-                        is_odd=self.is_odd,
-                        convolve_power=self.convolve_power)
+                        convolve_power=self.convolve_power,
+                        device=self.device)
 
         # noise part
         noise = torch.rand_like(harmonic).to(noise_param) * 2 - 1
@@ -90,8 +89,8 @@ class SubtractiveSynthesiser(nn.Module):
                         noise,
                         noise_param,
                         window_type=self.window_type,
-                        is_odd=self.is_odd,
-                        convolve_power=self.convolve_power)
+                        convolve_power=self.convolve_power,
+                        device=self.device)
         signal = harmonic + noise
 
         return signal, f0, final_phase, (harmonic, noise), (x_phon_emo1, x_phon_emo2)
