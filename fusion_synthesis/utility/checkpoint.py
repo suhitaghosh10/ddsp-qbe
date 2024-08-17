@@ -40,7 +40,7 @@ class Checkpoint(object):
             model_dict, 
             postfix='', 
             to_json=False):
-        '''save method'''
+        """save method"""
         for name, model in model_dict.items():
             self.save_model(
                 model, 
@@ -54,7 +54,7 @@ class Checkpoint(object):
             name='model',
             postfix='',
             to_json=False):
-        '''save method'''
+        """save method"""
         # path
         if postfix:
             postfix = '_' + postfix

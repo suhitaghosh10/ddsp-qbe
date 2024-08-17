@@ -8,6 +8,8 @@ import numpy as np
 import pickle
 from utils import get_F0
 
+CPU = 'cpu'
+
 
 class AudioDataset(Dataset):
     def __init__(
@@ -95,10 +97,10 @@ class AudioDataset(Dataset):
         wvlm_frame_len = int(waveform_sec*self.frame_rate_inv)
         strt = int(idx_from * self.frame_rate_inv)
 
-        audio_wavlm6_ = torch.load(audio_wavlm6_, map_location='cpu',weights_only=True).float()
+        audio_wavlm6_ = torch.load(audio_wavlm6_, map_location=CPU, weights_only=True).float()
         audio_wavlm6 = audio_wavlm6_[strt:strt+wvlm_frame_len]
 
-        audio_wavlm12_ = torch.load(audio_wavlm12_, map_location='cpu',weights_only=True).float()
+        audio_wavlm12_ = torch.load(audio_wavlm12_, map_location=CPU, weights_only=True).float()
         audio_wavlm12 = audio_wavlm12_[strt:strt + wvlm_frame_len]
 
         x = audio.astype('double')
@@ -192,7 +194,7 @@ class AudioDataset(Dataset):
         return file_list
 
 
-def get_data_loaders(args, whole_audio=False, extension='wav', use_emo_loss=False):
+def get_data_loaders(args, whole_audio=False, extension='wav'):
     data_train = AudioDataset(
         args.data.train_path,
         waveform_sec=args.data.duration,

@@ -2,7 +2,8 @@ import yaml
 import json
 
 import torch
-    
+
+
 class DotDict(dict):
     def __getattr__(*args):
         val = dict.get(*args)
@@ -29,9 +30,6 @@ def load_config(path_config):
     return args
 
 
-
-
-
 def convert_tensor_to_numpy(tensor, is_squeeze=True):
     if is_squeeze:
         tensor = tensor.squeeze()
@@ -41,17 +39,16 @@ def convert_tensor_to_numpy(tensor, is_squeeze=True):
         tensor = tensor.cpu()
     return tensor.numpy()
 
-           
+
 def load_model_params(
-        path_pt, 
+        path_pt,
         model,
         device='cpu'):
-
     # check
     print(' [*] restoring model from', path_pt)
 
     model.load_state_dict(
         torch.load(
-            path_pt, 
+            path_pt,
             map_location=torch.device(device)))
     return model

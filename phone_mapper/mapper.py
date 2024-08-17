@@ -8,7 +8,7 @@ import torchaudio.transforms as T
 
 from wavlm.WavLM import WavLM
 
-from utils import get_F0
+from utils import get_F0, CUDA
 
 
 class PhoneMapper(nn.Module):
@@ -17,7 +17,7 @@ class PhoneMapper(nn.Module):
                  wavlm: WavLM,
                  sr: int,
                  hop_length: int,
-                 device: str | None = 'cuda'
+                 device: str | None = CUDA
                  ) -> None:
         """ Phone Mapper module: Produces the mapped phonetic representations and the prosodic features from the source.
         """

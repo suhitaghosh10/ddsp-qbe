@@ -30,7 +30,6 @@ class Conformer(nn.Module):
 
         self._layers = nn.ModuleList([_EncoderLayer(self) for _ in range(num_layers)])
 
-    #  METHODS  ########################################################################################################
 
     def forward(self, phone, mask=None):
         # apply all layers to the input
@@ -101,9 +100,6 @@ def default(val, d):
 def cast_tuple(val):
     return (val,) if not isinstance(val, tuple) else val
 
-# ==================================================================================================================== #
-#  CLASS  _ E N C O D E R  L A Y E R                                                                                   #
-# ==================================================================================================================== #
 
 class _EncoderLayer(nn.Module):
     """One layer of the encoder.

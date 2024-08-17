@@ -6,6 +6,14 @@ import logging
 
 from wavlm.WavLM import WavLM, WavLMConfig
 
+HANN: str = 'hann'
+
+BLACKMAN: str = 'blackman'
+
+BLACKMAN_HARRIS: str = 'blackman-harris'
+
+CUDA: str = 'cuda'
+
 
 def get_F0(signal, sr, hop_size, min_f0=80., normalised=True):
     frame_resolution = (hop_size / sr)
@@ -23,7 +31,7 @@ def get_F0(signal, sr, hop_size, min_f0=80., normalised=True):
     return f0_hz, f0_normalised
 
 
-def znorm(x, log=False):
+def znorm(x, log: bool=False):
     if x.max() == 0:
         return x
     else:
@@ -32,7 +40,7 @@ def znorm(x, log=False):
         return (x - x.mean()) / torch.sqrt(x.var())
 
 
-def get_hnr(wav, min_pitch=80., sr=16000):
+def get_hnr(wav, min_pitch: float=80., sr: int=16000):
     sound = parselmouth.Sound(wav, sr)
     harmonic = call(sound, "To Harmonicity (cc)", 0.01, min_pitch, 0.1, 1.0)
     hnr = call(harmonic, "Get mean", 0, 0)
@@ -40,8 +48,9 @@ def get_hnr(wav, min_pitch=80., sr=16000):
 
 
 def get_wavlm(pretrained=True, progress=True, device='cuda') -> WavLM:
-    """Load the WavLM large checkpoint from the original paper. See https://github.com/microsoft/unilm/tree/master/wavlm for details. """
-    if torch.cuda.is_available() == False:
+    """Load the WavLM large checkpoint from the original paper. See
+    https://github.com/microsoft/unilm/tree/master/wavlm for details. """
+    if not torch.cuda.is_available():
         if str(device) != 'cpu':
             logging.warning(f"No GPU is available.")
             device = 'cpu'
@@ -61,13 +70,5 @@ def get_wavlm(pretrained=True, progress=True, device='cuda') -> WavLM:
     print(f"WavLM-Large loaded with {sum([p.numel() for p in model.parameters()]):,d} parameters.")
     return model
 
-    cfg = WavLMConfig(checkpoint['cfg'])
-    device = torch.device(device)
-    model = WavLM(cfg)
-    if pretrained:
-        model.load_state_dict(checkpoint['model'])
-    model = model.to(device)
-    model.eval()
-    print(f"WavLM-Large loaded with {sum([p.numel() for p in model.parameters()]):,d} parameters.")
-    return model
-
+if __name__ == '__main__':
+    get_wavlm()
