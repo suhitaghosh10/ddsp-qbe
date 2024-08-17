@@ -69,6 +69,3 @@ def get_wavlm(pretrained=True, progress=True, device='cuda') -> WavLM:
     model.eval()
     print(f"WavLM-Large loaded with {sum([p.numel() for p in model.parameters()]):,d} parameters.")
     return model
-
-if __name__ == '__main__':
-    get_wavlm()
