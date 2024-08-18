@@ -41,11 +41,11 @@ Some samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/
 
 ### Before Training
 
-1. Download the Librispeech and ESD datasets.
-2. Generate the WavLM 6th and 12th layers embeddings using `preprocess.py`.
-3. Configure all the training hyperparameters and paths in `resources/config.yaml`.
-4. Specify the WavLM paths in `config.yaml` (`train_path` and `val_path`).
-5. If using the emotion leakage-specific loss, ensure all WavLM 6th layer embeddings for ESD files are available at the location specified in `config.yaml` under `emotion_files_wavlm6_path`. Set `use_emo_loss` to `True` in the config file.
+1. Download the Librispeech and ESD datasets (audio and wavlm representations) from [here](https://cloud.ovgu.de/s/S2L7xPX85KBoqBa), and place them at location as mentioned in `config.yaml` (`train_path` and `val_path`).
+2. Configure all the training hyperparameters and paths in `resources/config.yaml`.
+3. If using the emotion leakage-specific loss:
+   i.  Ensure all WavLM 6th layer embeddings for ESD files are available at the location specified in `config.yaml` under `emotion_files_wavlm6_path`.
+   ii. Set `use_emo_loss` to `True` in the config file.
 
 ### Train
 
