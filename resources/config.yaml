@@ -1,12 +1,12 @@
 data:
   block_size: 320 #hop size used in preprocessing
-  duration: 2
-  sampling_rate: 16000
+  duration: 2 #seconds
+  sampling_rate: 16000 #Hz
   f0min: 80
   f0max: 1000
-  train_path: /scratch/sghosh/datasets/DDSP/libri_esd/train
-  valid_path: /scratch/sghosh/datasets/DDSP/libri_esd/val_extended
-  emotion_files_wavlm6_path: /project/sghosh/dataset/ESD #has to be provided to use emo loss (i.e. if use_emo_loss: True)
+  train_path: /project/sghosh/datasets/DDSP/train
+  valid_path: /project/sghosh/datasets/DDSP/val
+  emotion_files_wavlm6_path:  /project/sghosh/datasets/DDSP/train/wavlm12 #has to be provided to use emo loss (i.e. if use_emo_loss: True)
   extension: 'flac'
 model:
   n_mag_harmonic: 176
@@ -16,25 +16,20 @@ model:
   convolve_power: 2
 loss:
   n_ffts: [1024, 512, 256, 128, 64, 32]
-  #n_ffts: [2048, 1024, 512, 256, 128, 64, 32]
-  #n_ffts: [2048, 1024, 512, 256, 128, 64]
-  #n_ffts: [2053, 1021, 509, 257, 127, 67]
   jitter: 0.1
   shimmer: 0.1
   use_kurtosis: False
   use_emo_loss: True
 device: cuda
 env:
-  expdir: /cache/sghosh/exp/sad/
+  expdir: /cache/sghosh/exp/ddsp-qbe/
 
 inference:
   batch_size: 684
-  generate_files: True
+  generate_files: True # set True if you want sample files getting generated every 5 epochs
 train:
   batch_size: 684
-  #batch_size: 48
-  #batch_size: 1
-  epochs: 1000
+  epochs: 450
   interval_log: 10
   interval_save: 500
   interval_val: 500
