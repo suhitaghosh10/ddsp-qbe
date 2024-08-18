@@ -255,6 +255,6 @@ def validation(args, model, loss_func, loader_test, epoch, out_path, generate_fl
 
 def get_average_hnr(signal, sr=16000):
     len_sig = signal.shape[0]
-    hnr = [get_hnr(signal[i], sr) for i in range(len_sig)]
+    hnr = [get_hnr(signal[i], sr=sr) for i in range(len_sig)]
     hnr = sum(hnr) / len(hnr)
     return hnr

@@ -53,7 +53,7 @@ class AudioDataset(Dataset):
             with open('resources/emo_mapping.pkl', 'rb') as f:
                 self.emo_dict = pickle.load(f)
             self.emo_files_ids = np.arange(1,len(self.emo_dict.keys())+1)
-            print('The number of emotion files considered:{}', len(self.emo_files_ids))
+            print('The number of emotion files considered:', len(self.emo_files_ids))
             self.emo_file_path = emotion_files_wavlm6_path
 
 

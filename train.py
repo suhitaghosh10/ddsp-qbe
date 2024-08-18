@@ -62,8 +62,7 @@ if __name__ == '__main__':
     loss_func.to(args.device)
 
     # datas
-    loader_train, loader_valid = get_data_loaders(args, whole_audio=False, extension=args.data.extension,
-                                                  use_emo_loss=args.loss.use_emo_loss)
+    loader_train, loader_valid = get_data_loaders(args, whole_audio=False, extension=args.data.extension)
 
     # stage
     train(args, model=model, loss_func=loss_func, loader_train=loader_train, loader_test=loader_valid,
