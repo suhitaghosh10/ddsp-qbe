@@ -15,7 +15,7 @@ BLACKMAN_HARRIS: str = 'blackman-harris'
 CUDA: str = 'cuda'
 
 
-def get_F0(signal, sr, hop_size, min_f0=80., normalised=True):
+def get_F0(signal, sr, hop_size, min_f0=80.):
     frame_resolution = (hop_size / sr)
     f0, _ = pw.dio(
         signal,
@@ -27,7 +27,7 @@ def get_F0(signal, sr, hop_size, min_f0=80., normalised=True):
 
     f0_hz = torch.from_numpy(f0.astype('float32')).unsqueeze(-1)
     f0_hz[f0_hz < min_f0] *= 0
-    f0_normalised = znorm(f0_hz, False) if normalised else f0_hz
+    f0_normalised = znorm(f0_hz, False)
     return f0_hz, f0_normalised
 
 

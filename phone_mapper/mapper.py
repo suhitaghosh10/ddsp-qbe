@@ -76,7 +76,7 @@ class PhoneMapper(nn.Module):
 
         if return_f0:
             x = x[-1].numpy().astype('double')
-            _, f0_norm = get_F0(x, sr, hop_size, min_f0=80., normalised=True)
+            _, f0_norm = get_F0(x, sr, hop_size, min_f0=80.)
             inps['f0'] = f0_norm.unsqueeze(0)[:, :inps['x6'].size(0), :]
 
         return inps
