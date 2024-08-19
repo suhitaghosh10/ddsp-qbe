@@ -60,9 +60,10 @@ To start training, use the following command:
 The model weights are located in `resources/model_weights`.
 
 ## References and Acknowledgements
+Some portions of the code for this project have been adapted from the following repositories. A big thank you to the authors of:
 
-* YatingMusic/ddsp-singing-vocoders
-* bshall/knn-vc
+* [YatingMusic/ddsp-singing-vocoders](https://github.com/YatingMusic/ddsp-singing-vocoders)
+* [bshall/knn-vc](https://github.com/bshall/knn-vc)
 
 ## Notes
 In the original paper, the model was trained with ESD and data from Sep28-K and the ADReSS Challenge. However, we have provided an example training script using publicly available datasets due to privacy issues. The pathological datasets can be obtained upon request from their corresponding websites.
