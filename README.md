@@ -61,4 +61,8 @@ The model weights are located in `resources/model_weights`.
 
 ## References and Acknowledgements
 
-* In the original paper, the model was trained with ESD and data from Sep28-K and the ADReSS Challenge. However, due to privacy issues, we have provided an example training script using publicly available datasets. The pathological datasets can be obtained upon request from their corresponding websites.
+* YatingMusic/ddsp-singing-vocoders
+* bshall/knn-vc
+
+## Notes
+In the original paper, the model was trained with ESD and data from Sep28-K and the ADReSS Challenge. However, we have provided an example training script using publicly available datasets due to privacy issues. The pathological datasets can be obtained upon request from their corresponding websites.
