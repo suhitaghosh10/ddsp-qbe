@@ -75,7 +75,7 @@ class AudioDataset(Dataset):
     def get_data(self, name, duration):
         # path
         path_audio = os.path.join(self.path_root, 'audio', name) + '.'+self.extension
-        audio_wavlm6_ = os.path.join(self.path_root, 'wavlm', name) + '.pt'
+        audio_wavlm6_ = os.path.join(self.path_root, 'wavlm6', name) + '.pt'
         audio_wavlm12_ = os.path.join(self.path_root, 'wavlm12', name) + '.pt'
 
         # load audio
@@ -104,7 +104,7 @@ class AudioDataset(Dataset):
         audio_wavlm12 = audio_wavlm12_[strt:strt + wvlm_frame_len]
 
         x = audio.astype('double')
-        f0, f0_normalised = get_F0(signal=x, sr=self.sample_rate, hop_size=self.hop_size, min_f0=self.min_f0, normalised=True)
+        f0, f0_normalised = get_F0(signal=x, sr=self.sample_rate, hop_size=self.hop_size, min_f0=self.min_f0)
         f0 = f0[:audio_wavlm6.size(0)]
         f0_normalised = f0_normalised[:audio_wavlm6.size(0)]
 
