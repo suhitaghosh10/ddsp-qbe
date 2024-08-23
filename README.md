@@ -51,9 +51,9 @@ Some samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/
 
 To start training, use the following command:
 
-    ```
+    
     python train.py -g <gpu number> --config ./resources/config.yaml
-    ```
+    
 
 ### Model Weights
 
