@@ -34,7 +34,7 @@ Some samples can be found [here](https://github.com/suhitaghosh10/ddsp-qbe/tree/
 2. Install the Python dependencies mentioned in `requirements.txt`:
 
     ```
-    pip install -r requirements.txt
+    conda create --name <environment name> --file requirements.txt
     ```
 
 ## Training (Documentation WIP)
